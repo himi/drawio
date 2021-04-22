@@ -3665,6 +3665,76 @@
 			c.stroke();
 		};
 	});
+
+	mxMarker.addMarker('definedBy', function(c, shape, type, pe, unitX, unitY, size, source, sw, filled)
+    {
+		var pt = pe.clone();
+		pe.x -= unitX * size;
+		pe.y -= unitY * size;
+        var ratio = (size * 0.5773502691896258 + sw); // 1/sqrt(3) for equilateral triangle
+		var nx = unitX * ratio;
+		var ny = unitY * ratio;
+        var cx = unitX * (size + sw);
+        var cy = unitY * (size + sw);
+        var dotsize = size * 0.3;
+        var dotratio = size * 1.5;
+        var dx = unitX * dotratio;
+        var dy = unitY * dotratio;
+
+		return function()
+		{
+			c.begin();
+			c.moveTo(pt.x - unitX * sw, pt.y - unitY * sw);
+			c.lineTo(pt.x - cx - ny + unitX * sw, pt.y - cy + nx + unitY * sw);
+			c.lineTo(pt.x - cx + ny + unitX * sw, pt.y - cy - nx + unitY * sw);
+            c.close();
+			c.stroke();
+
+            c.begin();
+			c.ellipse(pt.x - dx - ny * 0.6 - dotsize * 0.5,
+                      pt.y - dy + nx * 0.6 - dotsize * 0.5,
+                      dotsize, dotsize);
+            c.fill();
+
+            c.begin();
+			c.ellipse(pt.x - dx + ny * 0.6 - dotsize * 0.5,
+                      pt.y - dy - nx * 0.6 - dotsize * 0.5,
+                      dotsize, dotsize);
+            c.fill();
+                
+		};
+    });
+
+	mxMarker.addMarker('redefine', function(c, shape, type, pe, unitX, unitY, size, source, sw, filled)
+    {
+		var pt = pe.clone();
+		pe.x -= unitX * size;
+		pe.y -= unitY * size;
+        var ratio = (size * 0.5773502691896258 + sw); // 1/sqrt(3) for equilateral triangle
+		var nx = unitX * ratio;
+		var ny = unitY * ratio;
+        var cx = unitX * (size + sw);
+        var cy = unitY * (size + sw);
+        var dotratio = size * 1.3;
+        var dx = unitX * dotratio;
+        var dy = unitY * dotratio;
+
+		return function()
+		{
+			c.begin();
+			c.moveTo(pt.x - unitX * sw, pt.y - unitY * sw);
+			c.lineTo(pt.x - cx - ny + unitX * sw, pt.y - cy + nx + unitY * sw);
+			c.lineTo(pt.x - cx + ny + unitX * sw, pt.y - cy - nx + unitY * sw);
+            c.close();
+			c.stroke();
+
+            c.begin();
+			c.moveTo(pt.x - dx - ny, pt.y - dy + nx);
+			c.lineTo(pt.x - dx + ny, pt.y - dy - nx);
+			c.stroke();
+
+		};
+    });
 	
 	// Registers and defines the custom marker
 	mxMarker.addMarker('halfCircle', function(c, shape, type, pe, unitX, unitY, size, source, sw, filled)
