@@ -15,17 +15,23 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.SecureRandom;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.cache.Cache;
 import javax.cache.CacheException;
+import javax.cache.CacheManager;
+import javax.cache.Caching;
+import javax.cache.spi.CachingProvider;
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.appengine.api.memcache.MemcacheService;
+import com.google.appengine.api.memcache.stdimpl.GCacheFactory;
 import com.google.appengine.api.utils.SystemProperty;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -52,7 +58,12 @@ abstract public class AbsAuthServlet extends HttpServlet
 	{
 		try
 		{
-			tokenCache = CacheFacade.createCache();
+			CachingProvider provider = Caching.getCachingProvider();
+			CacheManager manager = provider.getCacheManager();
+			Map<Object, Object> properties = new HashMap<>();
+			properties.put(MemcacheService.SetPolicy.ADD_ONLY_IF_NOT_PRESENT, true);
+			properties.put(GCacheFactory.EXPIRATION_DELTA, TOKEN_COOKIE_AGE);
+			tokenCache = manager.getCacheFactory().createCache(properties);
 		}
 		catch (CacheException e)
 		{
