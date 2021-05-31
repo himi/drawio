@@ -590,6 +590,40 @@
 					}
 				}), true, null, 'svg', true);
 		}));
+
+		editorUi.actions.put('multipleExportSvg', new Action('Multiple SVGs...', function()
+		{
+            var saveDataOrig = EditorUi.prototype.saveData;
+            EditorUi.prototype.saveData = function(filename, format, data, mimeType, base64Encoded) {
+                var fs = require('fs');
+                var path = '.' + '/' + filename;
+                var fileObject = new Object();
+                fileObject.path = path;
+                fileObject.name = path.replace(/^.*[\\\/]/, '');
+                fileObject.type = (base64Encoded) ? 'base64' : 'utf-8';
+					
+                fs.writeFile(fileObject.path, data, fileObject.type, mxUtils.bind(this, function (e) {
+                    if (e) {
+                        this.handleError({message: mxResources.get('errorSavingFile')});
+                    }
+                }));
+            }
+            var root = editorUi.editor.graph.getDefaultParent();
+            var numC = root.getChildCount();
+            for (var i = 0; i < numC; i++) {
+                var cell = root.getChildAt(i);
+                var attrs = cell.value.attributes;
+                var exportNameAttr = attrs['org.omg.sysml.exportName'];
+                if (exportNameAttr != undefined) {
+                    var exportName = exportNameAttr.value;
+                    editorUi.editor.graph.selectCells(true, true, cell, true);
+                    editorUi.exportSvgDirect(exportName, 1.0, false, false,
+                                       false, true, false, 0, false, false,
+                                       'auto', false, '');
+                }
+            }
+            EditorUi.prototype.saveData = saveDataOrig;
+		}));
 		
 		editorUi.actions.put('exportPng', new Action(mxResources.get('formatPng') + '...', function()
 		{
@@ -2115,6 +2149,8 @@
 			}
 			
 			this.addMenuItems(menu, ['exportSvg', '-'], parent);
+
+			this.addMenuItems(menu, ['multipleExportSvg', '-'], parent);
 			
 			// Redirects export to PDF to print in Chrome App
 			if (editorUi.isOffline() || editorUi.printPdfExport)

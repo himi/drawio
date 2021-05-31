@@ -4933,6 +4933,100 @@
 			}
 		}
 	};
+
+
+	EditorUi.prototype.exportSvgDirect = function(filenamebase, scale, transparentBackground, ignoreSelection, addShadow,
+		editable, embedImages, border, noCrop, currentPage, linkTarget, keepTheme, exportType)
+	{
+		if (this.spinner.spin(document.body, mxResources.get('export')))
+		{
+			try
+			{
+				var selectionEmpty = this.editor.graph.isSelectionEmpty();
+				ignoreSelection = (ignoreSelection != null) ? ignoreSelection : selectionEmpty;
+				var bg = (transparentBackground) ? null : this.editor.graph.background;
+				
+				if (bg == mxConstants.NONE)
+				{
+					bg = null;
+				}
+				
+				// Handles special case where background is null but transparent is false
+				if (bg == null && transparentBackground == false)
+				{
+					bg = (keepTheme) ? this.editor.graph.defaultPageBackgroundColor : '#ffffff';
+				}
+				
+				// Sets or disables alternate text for foreignObjects. Disabling is needed
+				// because PhantomJS seems to ignore switch statements and paint all text.
+				var svgRoot = this.editor.graph.getSvg(bg, scale, border, noCrop,
+					null, ignoreSelection, null, null, (linkTarget == 'blank') ? '_blank' :
+					((linkTarget == 'self') ? '_top' : null), null, true, keepTheme,
+					exportType);
+				
+				if (addShadow)
+				{
+					this.editor.graph.addSvgShadow(svgRoot);
+				}
+				
+				var filename = filenamebase + '.svg';
+	
+				var doSave = mxUtils.bind(this, function(svgRoot)
+				{
+					this.spinner.stop();
+					
+					if (editable)
+					{
+						svgRoot.setAttribute('content', this.getFileData(true, null, null, null, ignoreSelection,
+							currentPage, null, null, null, false));
+					}
+					
+					var svg = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+						'<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n' +
+						mxUtils.getXml(svgRoot);
+				
+		    		if (this.isLocalFileSave() || svg.length <= MAX_REQUEST_SIZE)
+		    		{
+		    			this.saveData(filename, 'svg', svg, 'image/svg+xml');
+		    		}
+		    		else
+		    		{
+		    			this.handleError({message: mxResources.get('drawingTooLarge')}, mxResources.get('error'), mxUtils.bind(this, function()
+		    			{
+		    				mxUtils.popup(svg);
+		    			}));
+		    		}
+				});
+
+				// Adds CSS
+				this.editor.addFontCss(svgRoot);
+				
+				if (this.editor.graph.mathEnabled)
+				{
+					this.editor.addMathCss(svgRoot);
+				}
+				
+				if (embedImages)
+				{
+					// Caches images
+					if (this.thumbImageCache == null)
+					{
+						this.thumbImageCache = new Object();
+					}
+					
+					this.editor.convertImages(svgRoot, doSave, this.thumbImageCache);
+				}
+				else
+				{
+					doSave(svgRoot);
+				}
+			}
+			catch (e)
+			{
+				this.handleError(e);
+			}
+		}
+	};
 	
 	EditorUi.prototype.addRadiobox = function(div, radioGroupName, label, checked, disabled, disableNewline, visible)
 	{
