@@ -613,13 +613,15 @@
             for (var i = 0; i < numC; i++) {
                 var cell = root.getChildAt(i);
                 var attrs = cell.value.attributes;
-                var exportNameAttr = attrs['org.omg.sysml.exportName'];
-                if (exportNameAttr != undefined) {
-                    var exportName = exportNameAttr.value;
-                    editorUi.editor.graph.selectCells(true, true, cell, true);
-                    editorUi.exportSvgDirect(exportName, 1.0, false, false,
-                                       false, true, false, 0, false, false,
-                                       'auto', false, '');
+                if (attrs != undefined) {
+                    var exportNameAttr = attrs['org.omg.sysml.exportName'];
+                    if (exportNameAttr != undefined) {
+                        var exportName = exportNameAttr.value;
+                        editorUi.editor.graph.selectCells(true, true, cell, true);
+                        editorUi.exportSvgDirect(exportName, 1.0, false, false,
+                                                 false, true, false, 0, false, false,
+                                                 'auto', false, '');
+                    }
                 }
             }
             EditorUi.prototype.saveData = saveDataOrig;
