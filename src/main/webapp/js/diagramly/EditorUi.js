@@ -14402,7 +14402,7 @@
     {
 
         // Start a spinner for a long duration operation
-        if (this.spinner.spin(document.body, 'exporting PNG and SVG files')) ;
+        let isSpinning = this.spinner.spin(document.body, 'exporting PNG and SVG files');
 
         // Find all symbols that have data property 'sysml2.symbol' and export those to PNG and SVG files
         let currentFile = this.getCurrentFile();
@@ -14410,10 +14410,12 @@
         {
             // Get the current path and folder, normalized with forward slashes
             let currentPath = currentFile.fileObject.path.replace(/\\/g, '/');
-            let symbolsFolder = currentPath.substring(0, currentPath.lastIndexOf('/') + 1) + 'symbols';
+            let pageName = this.currentPage.getName();
+            let symbolsFolder = currentPath.substring(0, currentPath.lastIndexOf('/') + 1) + pageName;
 
             const prefixes = ['sysml1.', 'sysml2.'];
-            let exportedFileNames = [];
+            let exportNames = new Set();
+            let duplicateNames = new Set();
             let root = this.editor.graph.getDefaultParent();
             let numC = root.getChildCount();
             for (let i = 0; i < numC; i++)
@@ -14431,14 +14433,20 @@
                             {
                                 let symbolName = exportNameAttr.value;
                                 let exportName = prefix == 'sysml1.' ? prefix + symbolName : symbolName;
-                                this.editor.graph.selectCells(true, true, cell, true);
-                                exportedFileNames.push(exportName + '.png (and .svg)');
-                                this.exportImageDirect(symbolsFolder, exportName, 5, false, false,
-                                    false, false, false, false, null, 'png',
-                                    false, 300, false, 'selection');
-                                this.exportSvgDirect(symbolsFolder, exportName, 1, false, false,
-                                    false, true, false, 0, false, false,
-                                    'auto', false, '');
+                                if (exportNames.has(exportName)) {
+                                    duplicateNames.add(exportName);
+                                }
+                                else
+                                {
+                                    exportNames.add(exportName);
+                                    this.editor.graph.selectCells(true, true, cell, true);
+                                    this.exportImageDirect(symbolsFolder, exportName, 4, false, false,
+                                        false, false, false, false, null, 'png',
+                                        false, 300, false, 'selection');
+                                    this.exportSvgDirect(symbolsFolder, exportName, 1, false, false,
+                                        false, true, false, 0, false, false,
+                                        'auto', false, '');
+                                }
                             }
                         }
                     }
@@ -14447,30 +14455,36 @@
 
             this.spinner.stop();
 
-            // Show dialog with listing of exported files or help message if none found
-            exportedFileNames.sort();
+            // Show dialog with listing of exported files,  or help message if none found
+            let names = [...exportNames].sort();
+            let n = names.length;
             let div = document.createElement('div');
-            let n = exportedFileNames.length;
             let htmlContent = '';
             if (n == 0)
             {
-                htmlContent += '<p>Warning: No files exported from this page.</p>';
+                htmlContent += '<p>WARNING: No files exported from this page.</p>';
                 htmlContent += '<p>No <strong>sysml2.symbol</strong> data property found on any symbol.</p>';
-                htmlContent += '<p><em>Export SysML symbols (PNG & SVG)</em> exports files for each shape with ';
-                htmlContent += '<strong>sysml2.symbol</strong> and uses its value for the filename.</p>';
+                htmlContent += '<p><em>Export as SysML symbols (PNG & SVG)</em> exports files for each shape with the ';
+                htmlContent += '<strong>sysml2.symbol</strong> data property, and uses its value for the filename.</p>';
             }
             else
             {
                 htmlContent += '<p>Exported ' + n + ' PNG and SVG files:</p><ul>';
-                htmlContent += '<li>' + exportedFileNames.join('</li><li>') + '</li></ul>';
+                htmlContent += '<li>' + names.join('.png (and .svg)</li><li>') + '.png (and .svg)</li></ul>';
                 htmlContent += '<p>into folder:<br/>' + symbolsFolder + '</p>';
+                if (duplicateNames.size > 0) {
+                    let nonUniqueNames = [...duplicateNames].sort();
+                    htmlContent += '<p>WARNING: There are non-unique symbol names on this page:</p>';
+                    htmlContent += '<li>' + nonUniqueNames.join('</li><li>') + '</li></ul>';
+                    htmlContent += '<p>For each non-unique name, only the first detected symbol was exported.</p>';
+                }
             }
             div.insertAdjacentHTML('afterbegin', htmlContent);
 
             const okButtonText = 'Close';
             const hideCancel = true;
             let dlg = new CustomDialog(this, div, null, null, okButtonText, null, null, hideCancel);
-            this.showDialog(dlg.container, 400, 600, true, true);
+            this.showDialog(dlg.container, 500, 700, true, true);
         }
     }
 
@@ -14523,9 +14537,6 @@
                 var svgData = '<?xml version="1.0" encoding="UTF-8"?>\n' +
                     '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n' +
                     mxUtils.getXml(svgRoot);
-
-                console.debug('IN exportSvgDirect isLocalFileSave=' + this.isLocalFileSave().toString()
-                    + ' currentFile=' + this.getCurrentFile());
 
                 if (this.isLocalFileSave() || svgData.length <= MAX_REQUEST_SIZE)
                 {
@@ -14656,18 +14667,18 @@
             fileObject.path = path;
             fileObject.name = path.replace(/^.*[\\\/]/, '');
             fileObject.type = (base64Encoded) ? 'base64' : 'utf-8';
-
-            fs.writeFile(fileObject.path, data, fileObject.type, mxUtils.bind(this, function(e)
+            EditorUi.debug('Saving file ' + path);
+            try {
+                fs.writeFileSync(fileObject.path, data, fileObject.type);
+            }
+            catch (e)
             {
-                if (e)
-                {
-                    this.handleError({message: mxResources.get('errorSavingFile')});
-                }
-            }));
+                this.handleError(e);
+            }
         }
         else
         {
-            this.handleError('Cannot create folder ' + folder);
+            this.handleError({message: 'Cannot create folder ' + folder});
         }
     };
 
